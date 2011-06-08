@@ -2628,40 +2628,43 @@ def properlySizeDoc(docElement, options):
 	w = SVGLength(docElement.getAttribute('width'))
 	h = SVGLength(docElement.getAttribute('height'))
 
-	# if width/height are not unitless or px then it is not ok to rewrite them into a viewBox.
-	# well, it may be OK for Web browsers and vector editors, but not for librsvg.
-	if options.renderer_workaround:
-		if ((w.units != Unit.NONE and w.units != Unit.PX) or
-			(h.units != Unit.NONE and h.units != Unit.PX)):
-		    return
+	if not options.override_size:
+	  # if width/height are not unitless or px then it is not ok to rewrite them into a viewBox.
+	  # well, it may be OK for Web browsers and vector editors, but not for librsvg.
+	  if options.renderer_workaround:
+		  if ((w.units != Unit.NONE and w.units != Unit.PX) or
+			  (h.units != Unit.NONE and h.units != Unit.PX)):
+			  return
 
-	# else we have a statically sized image and we should try to remedy that	
+	  # else we have a statically sized image and we should try to remedy that
 
-	# parse viewBox attribute
-	vbSep = re.split("\\s*\\,?\\s*", docElement.getAttribute('viewBox'), 3)
-	# if we have a valid viewBox we need to check it
-	vbWidth,vbHeight = 0,0
-	if len(vbSep) == 4:
-		try:
-			# if x or y are specified and non-zero then it is not ok to overwrite it
-			vbX = float(vbSep[0])
-			vbY = float(vbSep[1])
-			if vbX != 0 or vbY != 0:
-				return
-				
-			# if width or height are not equal to doc width/height then it is not ok to overwrite it
-			vbWidth = float(vbSep[2])
-			vbHeight = float(vbSep[3])
-			if vbWidth != w.value or vbHeight != h.value:
-				return
-		# if the viewBox did not parse properly it is invalid and ok to overwrite it
-		except ValueError:
-			pass
+	  # parse viewBox attribute
+	  vbSep = re.split("\\s*\\,?\\s*", docElement.getAttribute('viewBox'), 3)
+	  # if we have a valid viewBox we need to check it
+	  vbWidth,vbHeight = 0,0
+	  if len(vbSep) == 4:
+		  try:
+			  # if x or y are specified and non-zero then it is not ok to overwrite it
+			  vbX = float(vbSep[0])
+			  vbY = float(vbSep[1])
+			  if vbX != 0 or vbY != 0:
+				  return
+
+			  # if width or height are not equal to doc width/height then it is not ok to overwrite it
+			  vbWidth = float(vbSep[2])
+			  vbHeight = float(vbSep[3])
+			  if vbWidth != w.value or vbHeight != h.value:
+				  return
+		  # if the viewBox did not parse properly it is invalid and ok to overwrite it
+		  except ValueError:
+			  pass
 	
 	# at this point it's safe to set the viewBox and remove width/height
 	docElement.setAttribute('viewBox', '0 0 %s %s' % (w.value, h.value))
-	docElement.removeAttribute('width')
-	docElement.removeAttribute('height')
+	if w.units >= 0:
+		docElement.removeAttribute('width')
+	if h.units >= 0:
+	  docElement.removeAttribute('height')
 
 def remapNamespacePrefix(node, oldprefix, newprefix):
 	if node == None or node.nodeType != 1: return
@@ -3091,6 +3094,9 @@ _options_parser.add_option("--strip-xml-prolog",
 _options_parser.add_option("--enable-viewboxing",
 	action="store_true", dest="enable_viewboxing", default=False,
 	help="changes document width/height to 100%/100% and creates viewbox coordinates")
+_options_parser.add_option("--override-size",
+	action="store_true", dest="override_size", default=False,
+	help="ignore all safety checks for --enable-viewboxing")
 
 # GZ: this is confusing, most people will be thinking in terms of
 #     decimal places, which is not what decimal precision is doing
